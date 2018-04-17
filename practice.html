@@ -1,217 +1,139 @@
-
 <!DOCTYPE html>
 <html>
 <head>
-  <title>First React App</title>
+  <title>Popular Repos</title>
   <script crossorigin src="https://unpkg.com/react@16/umd/react.development.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
   <script src='https://unpkg.com/babel-standalone@6/babel.min.js'></script>
 </head>
 <body>
   <div id='app'></div>
-<script>
-  window.API = {
-    fetchFriends() {
-      return new Promise((res, rej) => {
-        const friends = [
-            {
-              name: 'Jordan',
-              active: true,
-            },
-            {
-              name: 'Mikenzi',
-              active: true,
-            },
-            {
-              name: 'Jake',
-              active: true,
-            },
-            {
-              name: 'John',
-              active: false,
-            }
-          ]
-      setTimeout(() => res(friends), 2000)
-      })
+  <script>
+    window.API = {
+      fetchPopularRepos(language) {
+        // "language" can be "javascript", "ruby", "python", or "all"
+        const encodedURI = encodeURI(`https://api.github.com/search/repositories?q=stars:>1+language:${language}&sort=stars&order=desc&type=Repositories`)
+        return fetch(encodedURI)
+          .then((data) => data.json())
+          .then((repos) => repos.items)
+          .catch((error) => {
+            console.warn(error)
+            return null
+          });
+      }
     }
-  }
-</script>
+  </script>
+
   <script type='text/babel'>
-
-
-
     class Loading extends React.Component {
       constructor(props) {
-        super(props)
-
+        super(props);
         this.state = {
           text: 'Loading'
-        }
+        };
       }
       componentDidMount() {
-        const stopper = this.state.text + '...'
+        const stopper = this.state.text + '...';
         this.interval = window.setInterval(() => {
-        console.log('running')
           this.state.text === stopper
-            ? this.setState({text: 'Loading'})
-            :this.setState((currentState) => {
-            return {
-              text:currentState.text + '.'
-            }
-          })
-        },300)
+            ? this.setState(() => ({ text: 'Loading' }))
+            : this.setState((prevState) => ({ text: prevState.text + '.' }))
+        }, 300)
       }
       componentWillUnmount() {
-        window.clearInterval(this.interval)
-      }
-      componentDidUpdate() {
-
+        window.clearInterval(this.interval);
       }
       render() {
-        return <p>{this.state.text}</p>
+        return (
+          <p>
+            {this.state.text}
+          </p>
+        )
       }
     }
+    function Nav (props) {
+      const languages = ['all', 'javascript', 'ruby', 'python']
 
-    function ActiveFriends (props) {
-      return(
-        <div>
-          <h3>Active Friends</h3>
+      return (
+        <nav>
           <ul>
-              {props.list.map((friend) => (
-                <li key={friend.name}>
-                  <span>{friend.name + '      '}</span>
-                  <button onClick={() => props.onRemoveFriend(friend.name)} >Remove</button>
-                <button onClick={() => props.onToggleFriend(friend.name)} >DeActivate</button>
-                </li>
+            {languages.map((lang) => (
+              <li key={lang} onClick={() => props.onSelectLanguage(lang)} >
+                {lang}
+              </li>
               ))}
-            </ul>
-      </div>
-    )
+          </ul>
+        </nav>
+
+        )
     }
+    function RepoGrid (props) {
+      return (
+        <ul style={{display:'flex', flexWrap:'wrap'}}>
+          {props.repos.map(({name, owner, stargazers_count, html_url}) => (
+              <li key={name} style={{margin:30}} >
+                <ul>
+                  <li><a href={html_url}>{name}</a></li>
+                  <li>@{owner.login}</li>
+                  <li>{stargazers_count}</li>
+                </ul>
+              </li>
+            ))}
+        </ul>
 
-    function InactiveFriends (props) {
-      return(
-       <div>
-        <h3>Inactive Friends</h3>
-          <ul>
-              {props.list.map((friend) => (
-                <li key={friend.name}>
-                  <span>{friend.name + '      '}</span>
-                  <button>Remove</button>
-                <button onClick={() => props.onToggleFriend(friend.name)} >Activate</button>
-
-                </li>
-              ))}
-            </ul>
-       </div>
-    )
+      )
     }
-
     class App extends React.Component {
       constructor(props) {
-        super(props)
+        super (props)
+
         this.state = {
-          friends: [],
-          input: '',
+          repose: [],
+          activeLanguage: 'all',
           loading: true,
         }
-        this.handleRemoveFriend = this.handleRemoveFriend.bind(this)
-        this.updateInput = this.updateInput.bind(this)
-        this.handleAddFriend = this.handleAddFriend.bind(this)
-        this.handleToggleFriend = this.handleToggleFriend.bind(this)
-
-        console.log('--constructor--')
+        this.handleSelectLanguage = this.handleSelectLanguage.bind(this)
+        this.fetchRepos = this.fetchRepos.bind(this)
       }
       componentDidMount() {
-        console.log('--componentDidMount--')
+        this.fetchRepos(this.state.activeLanguage)
+      }
+      componentDidUpdate(prevProps, prevState) {
+        if(prevState.activeLanguage !== this.state.activeLanguage) {
+          this.fetchRepos(this.state.activeLanguage)
+        }
 
-        API.fetchFriends()
-          .then((friends) => {
-            this.setState({
-              friends,
-              loading:false,
-            })
-          })
       }
-      componentDidUpdate() {
-        console.log('--componentDidUpdate--')
-      }
-      componentWillUnmount() {
-        console.log('--componentWillUnmount--')
-      }
-      handleAddFriend() {
-        this.setState((currentState) => {
-          return {
-            friends: currentState.friends.concat([{
-              name: currentState.input,
-              active: true,
-            }]),
-            input: ''
-          }
-        })
-      }
-      handleToggleFriend(name) {
-        this.setState((currentState) => {
-          const friend = currentState.friends.find((friend) => friend.name === name)
-
-          return {
-            friends: currentState.friends.filter((friend) => friend.name !== name)
-              .concat([{
-                name,
-                active: !friend.active
-                }])
-          }
-        })
-      }
-      handleRemoveFriend(name) {
-        this.setState((currentState) => {
-          return {
-            friends: currentState.friends.filter((friend) => friend.name !== name)
-          }
-        })
-      }
-      updateInput(e) {
-        const value = e.target.value
+      fetchRepos(lang) {
         this.setState({
-          input: value
+          loading:true,
+        })
+
+        window.API.fetchPopularRepos(lang)
+        .then((repos) => {
+          this.setState({
+            loading:false,
+            repos,
+          })
+        })
+      }
+      handleSelectLanguage(lang) {
+        this.setState({
+          activeLanguage:lang
         })
       }
       render() {
-        console.log('--render--')
-        if (this.state.loading === true) {
-          return <Loading />
-        }
         return (
           <div>
-            <input
-              type='text'
-              placeholder='new friend'
-              value={this.state.input}
-              onChange={this.updateInput}
-            />
-            <button onClick={this.handleAddFriend}>
-              Submit
-            </button>
-             <div>
-              <button onClick={() => this.setState({
-                friends: []
-              })}>
-                Clear All
-              </button>
-            </div>
-            <ActiveFriends
-              list={this.state.friends.filter((friend) => friend.active === true)}
-              onRemoveFriend = {this.handleRemoveFriend}
-              onToggleFriend = {this.handleToggleFriend}
-
-            />
-            <InactiveFriends
-              list={this.state.friends.filter((friend) => friend.active === false)}
-              onRemoveFriend = {this.handleRemoveFriend}
-              onToggleFriend = {this.handleToggleFriend}
-
-            />
-
+            <Nav onSelectLanguage={this.handleSelectLanguage} />
+              {this.state.loading === true
+                ? <Loading />
+                : <div>
+                  <h1 style={{textAlign:'center'}}>
+                    {this.state.activeLanguage}
+                  </h1>
+                  <RepoGrid repos={this.state.repos}/>
+                </div>}
           </div>
         )
       }
