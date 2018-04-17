@@ -26,8 +26,10 @@ export default function Topics ({match}) {
 
         <hr />
 
-        <Route path='/topics/:topicId' component={Topic} ></Route>
-
+        <Route path={`${match.path}/:topicId`} component={Topic} ></Route>
+        <Route exact path={match.path} render={() => {
+          return <h3>Please select a topic</h3>
+        }} />
     </div>
   )
 }
